@@ -1,6 +1,6 @@
 ﻿namespace ProjeYonetim.API.DTOs
 {
-    // Bu, kullanıcıya geri göndereceğimiz "temiz" liste modelidir
+
     public class ListDto
     {
         public int ListId { get; set; }

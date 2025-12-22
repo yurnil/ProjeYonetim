@@ -1,32 +1,34 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
 
-namespace ProjeYonetim.API.Models;
-
-public partial class Task
+namespace ProjeYonetim.API.Models
 {
-    [Key]
-    [Column("TaskID")]
-    public int TaskId { get; set; }
+    public class Task
+    {
+        [Key]
+        public int TaskId { get; set; }
 
-    [StringLength(255)]
-    public string Title { get; set; } = null!;
+        public string Title { get; set; }
 
-    [StringLength(2000)]
-    public string? Description { get; set; }
+        public string Description { get; set; }
 
-    public int Order { get; set; }
 
-    [Column(TypeName = "datetime")]
-    public DateTime? DueDate { get; set; }
+        public string Priority { get; set; } = "Normal";
 
-    [Column("ListID")]
-    public int ListId { get; set; }
+        public int ListId { get; set; }
 
-    [ForeignKey("ListId")]
-    [InverseProperty("Tasks")]
-    public virtual List List { get; set; } = null!;
+        public int Order { get; set; }
+
+        public string Label { get; set; }
+
+        public int? AssignedUserId { get; set; }
+
+        public DateTime? DueDate { get; set; }
+
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        [ForeignKey("ListId")]
+        public virtual List List { get; set; }
+    }
 }

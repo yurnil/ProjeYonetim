@@ -2,32 +2,28 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
 
-namespace ProjeYonetim.API.Models;
-
-public partial class Project
+namespace ProjeYonetim.API.Models
 {
-    [Key]
-    [Column("ProjectID")]
-    public int ProjectId { get; set; }
+    public class Project
+    {
+        [Key]
+        public int ProjectId { get; set; }
 
-    [StringLength(200)]
-    public string ProjectName { get; set; } = null!;
+        public string ProjectName { get; set; }
 
-    [StringLength(1000)]
-    public string? Description { get; set; }
+        public string Description { get; set; }
 
-    [Column(TypeName = "datetime")]
-    public DateTime? CreatedAt { get; set; }
 
-    [Column("OwnerUserID")]
-    public int OwnerUserId { get; set; }
+        public DateTime? CreatedAt { get; set; } = DateTime.Now;
 
-    [InverseProperty("Project")]
-    public virtual ICollection<List> Lists { get; set; } = new List<List>();
+        public int OwnerUserId { get; set; }
 
-    [ForeignKey("OwnerUserId")]
-    [InverseProperty("Projects")]
-    public virtual User OwnerUser { get; set; } = null!;
+        [ForeignKey("OwnerUserId")]
+        public virtual User OwnerUser { get; set; }
+
+        public virtual ICollection<List> Lists { get; set; }
+
+        public virtual ICollection<ProjectCollaborator> ProjectCollaborators { get; set; }
+    }
 }

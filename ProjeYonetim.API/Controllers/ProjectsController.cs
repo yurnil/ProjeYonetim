@@ -2,13 +2,14 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ProjeYonetim.API.Data;
 using ProjeYonetim.API.DTOs;
 using ProjeYonetim.API.Models;
-using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System;
 
 namespace ProjeYonetim.API.Controllers
 {
@@ -24,139 +25,190 @@ namespace ProjeYonetim.API.Controllers
             _context = context;
         }
 
-        // POST: api/projects
+        [HttpGet]
+        public async Task<IActionResult> GetMyProjects()
+        {
+
+            var userIdString = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
+            int userId = int.Parse(userIdString);
+
+
+            var myProjects = await _context.Projects
+                .Where(p => p.OwnerUserId == userId)
+                .ToListAsync();
+
+
+            var collabProjects = await _context.ProjectCollaborators
+                .Where(pc => pc.UserId == userId)
+                .Include(pc => pc.Project)
+                .Select(pc => pc.Project)
+                .ToListAsync();
+
+
+            var allProjects = myProjects.Concat(collabProjects)
+                .Distinct() 
+                .Select(p => new ProjectDto
+                {
+                    ProjectId = p.ProjectId,
+                    ProjectName = p.ProjectName,
+                    Description = p.Description,
+
+                    CreatedAt = p.CreatedAt ?? DateTime.Now,
+                    OwnerUserId = p.OwnerUserId
+                })
+                .OrderByDescending(p => p.CreatedAt)
+                .ToList();
+
+            return Ok(allProjects);
+        }
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetProject(int id)
+        {
+            var userIdString = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
+            int userId = int.Parse(userIdString);
+
+            var project = await _context.Projects
+                .Include(p => p.OwnerUser)
+                .Include(p => p.ProjectCollaborators)
+                    .ThenInclude(pc => pc.User)
+                .FirstOrDefaultAsync(p => p.ProjectId == id);
+
+            if (project == null) return NotFound("Proje bulunamadı.");
+
+            bool isMember = project.ProjectCollaborators.Any(pc => pc.UserId == userId);
+            if (project.OwnerUserId != userId && !isMember)
+            {
+                return StatusCode(403, "Bu projeyi görmeye yetkiniz yok.");
+            }
+
+            var lists = await _context.Lists
+                .Where(l => l.ProjectId == id)
+                .OrderBy(l => l.Order)
+                .Select(l => new
+                {
+                    l.ListId,
+                    l.ListName,
+                    l.Order,
+                    Tasks = l.Tasks.OrderBy(t => t.Order).Select(t => new
+                    {
+                        t.TaskId,
+                        t.Title,
+                        t.Description,
+                        t.Label,
+                        t.Priority,
+                        t.DueDate,
+                        t.AssignedUserId
+                    }).ToList()
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                project = new
+                {
+                    project.ProjectId,
+                    project.ProjectName,
+                    project.Description,
+                    project.OwnerUserId,
+                    OwnerName = project.OwnerUser?.FullName ?? "Bilinmiyor"
+                },
+                lists = lists,
+                collaborators = project.ProjectCollaborators.Select(pc => new {
+                    pc.User.UserId,
+                    pc.User.FullName
+                }).ToList()
+            });
+        }
+
+
         [HttpPost]
         public async Task<IActionResult> CreateProject([FromBody] ProjectCreateDto projectDto)
         {
-            var userEmail = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
-            if (string.IsNullOrEmpty(userEmail))
-            {
-                return Unauthorized("Token'dan e-posta adresi okunamadı.");
-            }
-
-            var user = await _context.Users.SingleOrDefaultAsync(u => u.Email == userEmail);
-            if (user == null)
-            {
-                return Unauthorized("Token'daki e-posta ile eşleşen kullanıcı bulunamadı.");
-            }
-
-            int userId = user.UserId;
+            var userIdString = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            int userId = int.Parse(userIdString);
 
             var newProject = new Project
             {
                 ProjectName = projectDto.ProjectName,
                 Description = projectDto.Description,
-                OwnerUserId = userId, // DOĞRU İSİM (Küçük 'd')
+                OwnerUserId = userId,
                 CreatedAt = DateTime.Now
             };
 
             _context.Projects.Add(newProject);
             await _context.SaveChangesAsync();
 
-            // "Temiz" DTO'yu oluştur (TÜM İSİMLER DÜZELTİLDİ)
             var projectToReturn = new ProjectDto
             {
-                ProjectId = newProject.ProjectId,     // Küçük 'd'
+                ProjectId = newProject.ProjectId,
                 ProjectName = newProject.ProjectName,
                 Description = newProject.Description,
-                CreatedAt = newProject.CreatedAt.Value, // .Value (null değil)
-                OwnerUserId = newProject.OwnerUserId   // Küçük 'd'
+
+                CreatedAt = newProject.CreatedAt.GetValueOrDefault(),
+                OwnerUserId = newProject.OwnerUserId
             };
 
-            return CreatedAtAction(nameof(GetProjectById), new { id = newProject.ProjectId }, projectToReturn);
+            return CreatedAtAction(nameof(GetProject), new { id = newProject.ProjectId }, projectToReturn);
         }
 
-        // GET: api/projects/{id}
-        // Bu metot, tüm panoyu (Proje, Listeleri ve Kartları) getirir
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetProjectById(int id)
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteProject(int id)
         {
-            // 1. Güvenlik: Token'dan Kullanıcı ID'sini Oku
             var userIdString = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
             int userId = int.Parse(userIdString);
 
-            // 2. Veritabanından Projeyi Çek (İlgili Listeleri ve Görevleri DAHİL EDEREK)
-            // Bu, Entity Framework'ün "Eager Loading" özelliğidir
             var project = await _context.Projects
-                .Include(p => p.Lists) // Projeye ait Listeleri de yükle
-                    .ThenInclude(l => l.Tasks) // Listelere ait Görevleri (Task) de yükle
-                .Where(p => p.ProjectId == id)
-                .FirstOrDefaultAsync();
+                .Include(p => p.ProjectCollaborators)
+                .Include(p => p.Lists)
+                    .ThenInclude(l => l.Tasks)
+                .FirstOrDefaultAsync(p => p.ProjectId == id);
 
-            if (project == null)
-            {
-                return NotFound("Proje bulunamadı.");
-            }
+            if (project == null) return NotFound("Proje bulunamadı.");
 
-            // 3. Güvenlik: Projenin sahibi bu kullanıcı mı?
-            if (project.OwnerUserId != userId)
-            {
-                return Forbid("Bu projeyi görme yetkiniz yok.");
-            }
+            if (project.OwnerUserId != userId) return Forbid();
 
-            // 4. "Temiz" Pano DTO'sunu oluştur (500 Sonsuz Döngü Hatasını önle)
-            // Bu, veritabanından çektiğimiz verileri "manuel" olarak temiz DTO'lara dönüştürme işlemidir
-            var projectBoardDto = new ProjectDto // (ProjectDto'yu ana DTO olarak kullanabiliriz)
-            {
-                ProjectId = project.ProjectId,
-                ProjectName = project.ProjectName,
-                Description = project.Description,
-                CreatedAt = project.CreatedAt.Value,
-                OwnerUserId = project.OwnerUserId
-            };
 
-            // Şimdi Listeleri ve Görevleri dönüştürelim
-            var listsDto = project.Lists.Select(l => new ListWithTasksDto
+            if (project.ProjectCollaborators != null) _context.ProjectCollaborators.RemoveRange(project.ProjectCollaborators);
+
+            if (project.Lists != null)
             {
-                ListId = l.ListId,
-                ListName = l.ListName,
-                Order = l.Order,
-                Tasks = l.Tasks.Select(t => new TaskDto // Her listenin içindeki görevleri de dönüştür
+                foreach (var list in project.Lists)
                 {
-                    TaskId = t.TaskId,
-                    Title = t.Title,
-                    Description = t.Description,
-                    Order = t.Order,
-                    ListId = t.ListId
-                }).OrderBy(t => t.Order).ToList() // Görevleri kendi içinde sırala
-            }).OrderBy(l => l.Order).ToList(); // Listeleri (Kolonları) kendi içinde sırala
+                    if (list.Tasks != null) _context.Tasks.RemoveRange(list.Tasks);
+                }
+                _context.Lists.RemoveRange(project.Lists);
+            }
 
+            _context.Projects.Remove(project);
+            await _context.SaveChangesAsync();
 
-            // 5. Cevabı birleştirelim (Bu, geçici bir anonim nesne)
-            // DTO'ları ayrı ayrı oluşturduğumuz için, bunları birleştirip gönderiyoruz
-            var response = new
-            {
-                Project = projectBoardDto,
-                Lists = listsDto
-            };
-
-            return Ok(response); // "Temiz" Pano verisini döndür
+            return Ok(new { message = "Silindi." });
         }
 
-        // GET: api/projects
-        [HttpGet]
-        public async Task<IActionResult> GetMyProjects()
+        [HttpPost("{projectId}/members")]
+        public async Task<IActionResult> AddMember(int projectId, [FromBody] string email)
         {
-            var userIdString = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString))
+            var project = await _context.Projects.FindAsync(projectId);
+            if (project == null) return NotFound("Proje bulunamadı.");
+
+            var userToAdd = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (userToAdd == null) return NotFound("Kullanıcı bulunamadı.");
+
+            var exists = await _context.ProjectCollaborators
+                .AnyAsync(pc => pc.ProjectId == projectId && pc.UserId == userToAdd.UserId);
+
+            if (exists) return BadRequest("Zaten üye.");
+
+            _context.ProjectCollaborators.Add(new ProjectCollaborator
             {
-                return Unauthorized("Token'dan Kullanıcı ID'si okunamadı.");
-            }
-            int userId = int.Parse(userIdString);
+                ProjectId = projectId,
+                UserId = userToAdd.UserId
+            });
 
-            var projects = await _context.Projects
-                .Where(p => p.OwnerUserId == userId) // DOĞRU İSİM (Küçük 'd')
-                .Select(p => new ProjectDto
-                {
-                    ProjectId = p.ProjectId,     // Küçük 'd'
-                    ProjectName = p.ProjectName,
-                    Description = p.Description,
-                    CreatedAt = p.CreatedAt.Value, // .Value (null değil)
-                    OwnerUserId = p.OwnerUserId   // Küçük 'd'
-                })
-                .ToListAsync();
-
-            return Ok(projects);
+            await _context.SaveChangesAsync();
+            return Ok(new { message = "Üye eklendi." });
         }
     }
 }

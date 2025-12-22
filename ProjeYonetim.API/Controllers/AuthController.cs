@@ -1,13 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using ProjeYonetim.API.Data;
 using ProjeYonetim.API.DTOs;
 using ProjeYonetim.API.Models;
+using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography; 
 using System.Text;
-using System.Threading.Tasks; 
-using BCrypt.Net;             
+using System.Threading.Tasks;
 
 namespace ProjeYonetim.API.Controllers
 {
@@ -24,66 +26,71 @@ namespace ProjeYonetim.API.Controllers
             _configuration = configuration;
         }
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto registerDto)
+        private string HashPassword(string password)
         {
-            if (await _context.Users.AnyAsync(u => u.Email == registerDto.Email))
+            using (var sha256 = SHA256.Create())
             {
-                return BadRequest("Bu e-posta adresi zaten kullanılıyor.");
+                var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+                var builder = new StringBuilder();
+                for (int i = 0; i < bytes.Length; i++)
+                {
+                    builder.Append(bytes[i].ToString("x2"));
+                }
+                return builder.ToString();
             }
+        }
 
-            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
-            var newUser = new User
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterDto dto)
+        {
+            if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
+                return BadRequest("Bu e-posta zaten kullanılıyor.");
+
+            var user = new User
             {
-                FullName = registerDto.FullName,
-                Email = registerDto.Email,
-                PasswordHash = hashedPassword,
+                FullName = dto.FullName,
+                Email = dto.Email,
+
+                PasswordHash = HashPassword(dto.Password),
                 Role = "User",
                 IsEnabled = true
             };
 
-            _context.Users.Add(newUser);
+            _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return StatusCode(201, "Kullanıcı başarıyla oluşturuldu.");
+
+            return Ok(new { message = "Kayıt başarılı." });
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
+        public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
-            // DİKKAT: .Users'tan sonra .SingleOrDefaultAsync kullanıyoruz
-            var user = await _context.Users.SingleOrDefaultAsync(u => u.Email == loginDto.Email);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
 
-            if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash) || !user.IsEnabled)
+            if (user == null || user.PasswordHash != HashPassword(dto.Password))
+                return Unauthorized("E-posta veya şifre hatalı.");
+
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var keyString = _configuration["Jwt:Key"] ?? "BuProjeIcinCokGizliVeUzunBirAnahtar123456!";
+            var key = Encoding.ASCII.GetBytes(keyString);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
             {
-                return Unauthorized("Geçersiz e-posta veya şifre.");
-            }
-
-            string token = GenerateJwtToken(user);
-            return Ok(new { token = token });
-        }
-
-        private string GenerateJwtToken(User user)
-        {
-            var claims = new[]
-            {
-                // DİKKAT: Burası 'UserId' olmalı (küçük 'd'). Scaffold böyle oluşturur.
-                new Claim(JwtRegisteredClaimNames.Sub, user.UserId.ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role)
+                Subject = new ClaimsIdentity(new Claim[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.UserId.ToString()),
+                    new Claim(ClaimTypes.Email, user.Email),
+                    new Claim(ClaimTypes.Role, user.Role)
+                }),
+                Expires = DateTime.UtcNow.AddDays(30),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            var tokenString = tokenHandler.WriteToken(token);
 
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claims,
-                expires: DateTime.Now.AddDays(1),
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            return Ok(new { token = tokenString, userId = user.UserId, fullName = user.FullName, role = user.Role });
         }
     }
 }
