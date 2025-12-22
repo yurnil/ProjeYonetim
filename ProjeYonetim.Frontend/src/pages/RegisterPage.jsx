@@ -16,7 +16,7 @@ function RegisterPage() {
     setError('');
 
     try {
-      // Backend'deki RegisterDto'ya uygun veri gönderiyoruz
+
       await axios.post(`${API_URL}/api/auth/register`, { 
         fullName: fullName,
         email: email, 
