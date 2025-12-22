@@ -49,7 +49,7 @@ namespace ProjeYonetim.API.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Comments");
+                    b.ToTable("Comments"); 
                 });
 
             modelBuilder.Entity("ProjeYonetim.API.Models.List", b =>

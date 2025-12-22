@@ -114,7 +114,7 @@ namespace ProjeYonetim.API.Controllers
             int orderOfDeletedList = listToDelete.Order;
 
             var listsToUpdate = await _context.Lists
-                .Where(l => l.ProjectId == projectId && l.Order > orderOfDeletedList)
+                .Where(l => l.ProjectId == projectId && l.Order > orderOfDeletedList) 
                 .ToListAsync();
 
             foreach (var list in listsToUpdate)

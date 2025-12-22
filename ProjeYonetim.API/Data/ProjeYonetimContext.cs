@@ -39,7 +39,7 @@ public partial class ProjeYonetimContext : DbContext
         {
             entity.HasKey(e => e.ProjectId).HasName("PK__Projects__761ABED0BC930C7A");
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
-            entity.HasOne(d => d.OwnerUser).WithMany(p => p.Projects).HasConstraintName("FK_Projects_Users");
+            entity.HasOne(d => d.OwnerUser).WithMany(p => p.Projects).HasConstraintName("FK_Projects_Users"); 
         });
 
         modelBuilder.Entity<Models.Task>(entity =>

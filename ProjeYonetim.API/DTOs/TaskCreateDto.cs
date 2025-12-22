@@ -6,7 +6,7 @@ namespace ProjeYonetim.API.DTOs
     {
         [Required(ErrorMessage = "Görev başlığı zorunludur.")]
         [StringLength(255)]
-        public string Title { get; set; }
+        public string Title { get; set; } 
 
         [StringLength(2000)]
         public string? Description { get; set; }

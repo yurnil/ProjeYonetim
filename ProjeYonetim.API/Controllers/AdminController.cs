@@ -26,7 +26,7 @@ namespace ProjeYonetim.API.Controllers
         
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
-        {
+        { 
             var users = await _context.Users
                 .Select(u => new UserDto 
                 {

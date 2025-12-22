@@ -12,7 +12,7 @@ public partial class List
     [Column("ListID")]
     public int ListId { get; set; }
 
-    [StringLength(100)]
+    [StringLength(100)]  
     public string ListName { get; set; } = null!;
 
     public int Order { get; set; }

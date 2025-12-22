@@ -170,7 +170,7 @@ namespace ProjeYonetim.API.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_ProjectCollaborators_ProjectId",
                 table: "ProjectCollaborators",
-                column: "ProjectId");
+                column: "ProjectId"); 
 
             migrationBuilder.CreateIndex(
                 name: "IX_ProjectCollaborators_UserId",

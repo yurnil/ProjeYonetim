@@ -3,6 +3,6 @@
     public class TaskMoveDto
     {
         
-        public int TargetListId { get; set; }
+        public int TargetListId { get; set; } 
     }
 }

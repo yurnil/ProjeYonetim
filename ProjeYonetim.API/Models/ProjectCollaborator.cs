@@ -10,7 +10,7 @@ namespace ProjeYonetim.API.Models
 
 
         public int ProjectId { get; set; }
-        [ForeignKey("ProjectId")]
+        [ForeignKey("ProjectId")] 
         public Project Project { get; set; }
 
         public int UserId { get; set; }

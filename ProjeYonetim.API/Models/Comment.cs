@@ -9,7 +9,7 @@ namespace ProjeYonetim.API.Models
         [Key]
         public int CommentId { get; set; }
 
-        [Required]
+        [Required] 
         public string Text { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;

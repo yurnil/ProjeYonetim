@@ -7,7 +7,7 @@ namespace ProjeYonetim.API.Models
     public class Task
     {
         [Key]
-        public int TaskId { get; set; }
+        public int TaskId { get; set; } 
 
         public string Title { get; set; }
 

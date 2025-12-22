@@ -52,7 +52,7 @@ namespace ProjeYonetim.API.Data
 
             var task2 = new ProjeYonetim.API.Models.Task
             {
-                Title = "Giriş Ekranı Bug Fix",
+                Title = "Giriş Ekranı Bug Fix", 
                 ListId = list2.ListId,
                 Order = 1,
                 Label = "Frontend",
