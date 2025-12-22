@@ -59,7 +59,7 @@ function LoginPage() {
             </div>
 
             <button type="submit" className="btn btn-primary btn-lg w-100 fw-bold shadow-sm">
-              Giriş Yap
+              Giriş Yap 
             </button>
 
             {error && <div className="alert alert-danger mt-3 text-center">{error}</div>}

@@ -291,7 +291,7 @@ function ProjectDetailPage() {
                             ))}
                             {provided.placeholder}
                         </div>
-                    )}
+                    )} 
                 </Droppable>
 
                 <div style={{display:'flex', gap:'5px', marginTop:'5px'}}>
