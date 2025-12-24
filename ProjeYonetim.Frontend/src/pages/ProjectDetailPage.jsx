@@ -19,6 +19,18 @@ const getCurrentUserId = () => {
   } catch (e) { return null; }
 };
 
+const getCurrentUserName = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    const payload = JSON.parse(jsonPayload);
+    return payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || payload.unique_name || payload.name || payload.email || null;
+  } catch (e) { return null; }
+};
+
 function ProjectDetailPage() {
   const { id } = useParams();
   const [projectData, setProjectData] = useState(null);
@@ -179,13 +191,55 @@ function ProjectDetailPage() {
       setEditTitle(task.title);
       setEditDescription(task.description || ''); 
       setIsEditing(false); 
-      fetchComments(task.taskId); 
+      fetchComments(task.taskId);
+  };
+
+  const fetchComments = async (taskId) => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await axios.get(`${API_URL}/api/tasks/${taskId}/comments`, { headers: { Authorization: `Bearer ${token}` } });
+      setComments(response.data || []);
+    } catch (err) {
+      // Fallback: try query-based endpoint if the above doesn't exist
+      try {
+        const response = await axios.get(`${API_URL}/api/comments?taskId=${taskId}`, { headers: { Authorization: `Bearer ${token}` } });
+        setComments(response.data || []);
+      } catch (e) {
+        console.error('Yorumlar yüklenemedi:', err);
+        setComments([]);
+      }
+    }
+  };
+
+  const formatTime = (dateStr) => {
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? new Date().toLocaleTimeString() : d.toLocaleTimeString();
   };
 
   const handleAddComment = async () => {
+    const text = newComment.trim();
+    if (!text) return; // ignore empty
     const token = localStorage.getItem('token');
-    await axios.post(`${API_URL}/api/tasks/comments`, { taskId: selectedTask.taskId, text: newComment }, { headers: { Authorization: `Bearer ${token}` } });
-    setNewComment(''); fetchComments(selectedTask.taskId);
+    try {
+      const response = await axios.post(`${API_URL}/api/tasks/comments`, { taskId: selectedTask.taskId, text }, { headers: { Authorization: `Bearer ${token}` } });
+      // Prepare a normalized comment object to append immediately
+      const resp = response.data || {};
+      const createdAt = resp.createdAt && !isNaN(new Date(resp.createdAt).getTime()) ? resp.createdAt : new Date().toISOString();
+      const commentId = resp.commentId || resp.id || `tmp-${Date.now()}`;
+      const userName = resp.userName || resp.userFullName || getCurrentUserName() || 'Sen';
+      const commentText = resp.text || text;
+
+      const appended = { commentId, userName, text: commentText, createdAt };
+      setComments(prev => [...prev, appended]);
+      setNewComment('');
+      // Try to sync with server in background (refresh if server returns full data)
+      if (!response.data || !response.data.commentId) {
+        fetchComments(selectedTask.taskId);
+      }
+    } catch (err) {
+      console.error('Yorum gönderilemedi:', err);
+      alert('Yorum gönderilemedi. Lütfen tekrar deneyin.');
+    }
   };
 
   const handleAssignUser = async (taskId, userId) => {
@@ -430,7 +484,7 @@ function ProjectDetailPage() {
                 <div className="comments-list">
                   {comments.map(c => (
                     <div key={c.commentId} className="comment-item">
-                      <div className="comment-meta"><strong>{c.userName}</strong> <span>{new Date(c.createdAt).toLocaleTimeString()}</span></div>
+                      <div className="comment-meta"><strong>{c.userName}</strong> <span>{formatTime(c.createdAt)}</span></div>
                       <p>{c.text}</p>
                     </div>
                   ))}

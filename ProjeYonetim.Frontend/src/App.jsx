@@ -1,11 +1,28 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 
 function App() {
   const navigate = useNavigate();
 
-  const handleLogout = () => {
+  const [isLogged, setIsLogged] = useState(Boolean(localStorage.getItem('token')));
 
+  useEffect(() => {
+    const onAuthChange = () => setIsLogged(Boolean(localStorage.getItem('token')));
+    const onStorage = (e) => {
+      if (e.key === 'token') onAuthChange();
+    };
+
+    window.addEventListener('authChange', onAuthChange);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('authChange', onAuthChange);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+
+  const handleLogout = () => {
     localStorage.removeItem('token');
+    window.dispatchEvent(new Event('authChange'));
     navigate('/login');
   };
 
@@ -28,18 +45,24 @@ function App() {
               <li className="nav-item">
                 <Link className="nav-link" to="/">Ana Sayfa</Link>
               </li>
-              <li className="nav-item">
-                <Link className="nav-link" to="/login">Giriş Yap</Link>
-              </li>
-              <li className="nav-item">
-                <Link className="nav-link" to="/register">Kayıt Ol</Link>
-              </li>
+              {!isLogged && (
+                <>
+                  <li className="nav-item">
+                    <Link className="nav-link" to="/login">Giriş Yap</Link>
+                  </li>
+                  <li className="nav-item">
+                    <Link className="nav-link" to="/register">Kayıt Ol</Link>
+                  </li>
+                </>
+              )}
             </ul>
 
             <div className="d-flex">
-               <button onClick={handleLogout} className="btn btn-outline-danger btn-sm">
-                 Çıkış Yap
-               </button>
+              {isLogged && (
+                <button onClick={handleLogout} className="btn btn-outline-danger btn-sm">
+                  Çıkış Yap
+                </button>
+              )}
             </div>
           </div>
         </div>
