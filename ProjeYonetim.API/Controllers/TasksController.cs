@@ -252,5 +252,67 @@ namespace ProjeYonetim.API.Controllers
             public string Title { get; set; }
             public string Description { get; set; }
         }
+
+
+        [HttpGet("stats")]
+        public async Task<IActionResult> GetTaskStats()
+        {
+            try
+            {
+                
+                var userIdString = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdString)) return Unauthorized("Oturum hatası.");
+                int currentUserId = int.Parse(userIdString);
+
+               
+                var myProjectIds = await _context.Projects
+                    .Where(p => p.OwnerUserId == currentUserId || p.ProjectCollaborators.Any(pc => pc.UserId == currentUserId))
+                    .Select(p => p.ProjectId)
+                    .ToListAsync();
+
+                
+                var groupedTasks = await _context.Tasks
+                    .Where(t => myProjectIds.Contains(t.List.ProjectId)) 
+                    .GroupBy(t => t.Status)
+                    .Select(g => new { Status = g.Key, Count = g.Count() })
+                    .ToListAsync();
+
+             
+                var stats = groupedTasks.Select(g => new
+                {
+                    name = g.Status == Models.TaskStatusType.ToDo ? "Yapılacaklar" :
+                           g.Status == Models.TaskStatusType.InProgress ? "Devam Edenler" :
+                           "Bitenler",
+                    value = g.Count
+                }).ToList();
+
+                return Ok(stats);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "İstatistikler çekilirken bir hata oluştu: " + ex.Message);
+            }
+        }
+
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateTaskStatus(int id, [FromBody] int newStatus)
+        {
+            try
+            {
+                
+                var task = await _context.Tasks.FindAsync(id);
+                if (task == null) return NotFound("Görev bulunamadı.");
+
+                
+                task.Status = (Models.TaskStatusType)newStatus;
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Durum başarıyla güncellendi!" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Durum güncellenirken sunucu hatası oluştu: " + ex.Message);
+            }
+        }
     }
 }

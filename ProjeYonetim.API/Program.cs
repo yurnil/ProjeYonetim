@@ -4,6 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using ProjeYonetim.API.Data;
 using System.Text;
+using ProjeYonetim.API.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,6 +42,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+        };
+
+        options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+
+                
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chatHub"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
         };
 
 
@@ -93,7 +110,13 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+
+builder.Services.AddSignalR();
+
+
+
 var app = builder.Build();
+app.MapHub<ChatHub>("/chatHub");
 
 if (app.Environment.IsDevelopment())
 {
@@ -101,8 +124,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseRouting();           
-app.UseCors("AllowReactApp"); 
+app.UseRouting();
+app.UseCors(builder => builder
+    .WithOrigins("http://localhost:5173") 
+    .AllowAnyMethod()
+    .AllowAnyHeader()
+    .AllowCredentials()); 
 app.UseAuthentication();    
 app.UseAuthorization();     
 

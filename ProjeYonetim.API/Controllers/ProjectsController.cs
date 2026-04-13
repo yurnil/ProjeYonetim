@@ -99,7 +99,8 @@ namespace ProjeYonetim.API.Controllers
                         t.Label,
                         t.Priority,
                         t.DueDate,
-                        t.AssignedUserId
+                        t.AssignedUserId,
+                        Status = (int)t.Status,
                     }).ToList()
                 })
                 .ToListAsync();

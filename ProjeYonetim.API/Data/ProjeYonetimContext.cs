@@ -22,6 +22,7 @@ public partial class ProjeYonetimContext : DbContext
     public virtual DbSet<User> Users { get; set; }
     public DbSet<ProjectCollaborator> ProjectCollaborators { get; set; }
     public DbSet<Comment> Comments { get; set; }
+    public DbSet<Message> Messages { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer("Name=ConnectionStrings:DefaultConnection");
@@ -72,8 +73,25 @@ public partial class ProjeYonetimContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict); 
         });
 
+       
+        modelBuilder.Entity<Message>()
+            .HasOne(m => m.Sender)
+            .WithMany()
+            .HasForeignKey(m => m.SenderId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        
+        modelBuilder.Entity<Message>()
+            .HasOne(m => m.Receiver)
+            .WithMany()
+            .HasForeignKey(m => m.ReceiverId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        base.OnModelCreating(modelBuilder);
+
         OnModelCreatingPartial(modelBuilder);
     }
+
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }

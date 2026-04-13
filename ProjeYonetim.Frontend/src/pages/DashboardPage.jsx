@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const API_URL = 'http://localhost:5101'; 
 
@@ -8,6 +9,8 @@ function DashboardPage() {
   const [projects, setProjects] = useState([]);
   const [newProjectName, setNewProjectName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [taskStats, setTaskStats] = useState([]);
+
 
   const fetchProjects = async () => {
     const token = localStorage.getItem('token');
@@ -23,8 +26,30 @@ function DashboardPage() {
     }
   };
 
+  
+  const fetchTaskStats = async () => {
+    const token = localStorage.getItem('token');
+    try {
+      const response = await axios.get(`${API_URL}/api/Tasks/stats`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const colors = ['#ffc107', '#0dcaf0', '#198754', '#fd7e14', '#6f42c1'];
+      const formattedData = response.data.map((item, index) => ({
+        ...item,
+        color: colors[index % colors.length]
+      }));
+      
+      setTaskStats(formattedData);
+    } catch (err) {
+      console.error("İstatistikler yüklenemedi:", err);
+    }
+  };
+
+ 
   useEffect(() => {
     fetchProjects();
+    fetchTaskStats();
   }, []);
 
   const handleCreateProject = async (e) => {
@@ -83,6 +108,33 @@ function DashboardPage() {
           </form>
         </div>
       </div>
+      {/* --- YÖNETİCİ GRAFİK PANELİ --- */}
+      <div className="card shadow-sm border-0 rounded-4 mb-5">
+        <div className="card-body p-4">
+          <h4 className="fw-bold mb-4 text-secondary">Genel Görev Durumu</h4>
+          <div style={{ width: '100%', height: 300 }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={taskStats}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={80} /* Donut grafik */
+                  outerRadius={110}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {taskStats.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend verticalAlign="bottom" height={36}/>
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
 
       <div className="row g-4">
         {projects.length === 0 ? (
@@ -96,7 +148,7 @@ function DashboardPage() {
                 <div className="card-body d-flex flex-column">
                     <div className="d-flex justify-content-between align-items-start mb-3">
                         <div className="badge bg-light text-primary border border-primary-subtle p-2 rounded-3">
-                            📌 Proje
+                             Proje
                         </div>
                         <button 
                             onClick={() => handleDeleteProject(proj.projectId)} 

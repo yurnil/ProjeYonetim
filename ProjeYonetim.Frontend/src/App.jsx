@@ -1,5 +1,6 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import ChatBox from './pages/ChatBox';
 
 function App() {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ function App() {
         <div className="container">
 
           <Link className="navbar-brand fw-bold" to="/">
-            🚀 Proje Yönetim
+             Proje Yönetim
           </Link>
 
           <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -72,7 +73,9 @@ function App() {
       <main className="container mt-4">
         <Outlet /> 
       </main>
+      {isLogged && <ChatBox />}
     </div>
+  
   );
 }
 

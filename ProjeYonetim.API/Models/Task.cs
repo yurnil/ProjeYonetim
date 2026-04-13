@@ -4,6 +4,12 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ProjeYonetim.API.Models
 {
+    public enum TaskStatusType
+    {
+        ToDo = 0,       
+        InProgress = 1, 
+        Done = 2        
+    }
     public class Task
     {
         [Key]
@@ -12,6 +18,8 @@ namespace ProjeYonetim.API.Models
         public string Title { get; set; }
 
         public string Description { get; set; }
+        
+        public TaskStatusType Status { get; set; } = TaskStatusType.ToDo;
 
 
         public string Priority { get; set; } = "Normal";
