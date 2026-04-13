@@ -7,7 +7,7 @@ import RegisterPage from './pages/RegisterPage.jsx';
 import LoginPage from './pages/LoginPage.jsx'; 
 import DashboardPage from './pages/DashboardPage.jsx';
 import './index.css'; 
-
+import ProfilePage from './pages/ProfilePage';
 
 const router = createBrowserRouter([
   {
@@ -30,7 +30,12 @@ const router = createBrowserRouter([
       {
         path: '/register',
         element: <RegisterPage /> 
-      }
+      },
+
+      {
+  path: "/profile",
+  element: <ProfilePage />,
+},
     ]
   }
 ]);

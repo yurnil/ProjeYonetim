@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ProjeYonetim.API.Data;
 
@@ -11,9 +12,11 @@ using ProjeYonetim.API.Data;
 namespace ProjeYonetim.API.Migrations
 {
     [DbContext(typeof(ProjeYonetimContext))]
-    partial class ProjeYonetimContextModelSnapshot : ModelSnapshot
+    [Migration("20260413083320_AddProfileFields")]
+    partial class AddProfileFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

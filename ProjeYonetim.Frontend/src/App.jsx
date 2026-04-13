@@ -1,6 +1,7 @@
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import ChatBox from './pages/ChatBox';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   const navigate = useNavigate();
@@ -60,9 +61,15 @@ function App() {
 
             <div className="d-flex">
               {isLogged && (
-                <button onClick={handleLogout} className="btn btn-outline-danger btn-sm">
-                  Çıkış Yap
-                </button>
+                <> 
+                  <Link to="/profile" className="btn btn-outline-light btn-sm fw-bold me-2">
+                     Profilim
+                  </Link>
+                  
+                  <button onClick={handleLogout} className="btn btn-outline-danger btn-sm">
+                    Çıkış Yap
+                  </button>
+                </>
               )}
             </div>
           </div>
