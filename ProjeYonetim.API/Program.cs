@@ -21,7 +21,8 @@ builder.Services.AddCors(options =>
         {
             policyBuilder.WithOrigins("http://localhost:3000", "http://localhost:5173") 
                          .AllowAnyHeader()  
-                         .AllowAnyMethod(); 
+                         .AllowAnyMethod()
+                         .AllowCredentials();
         });
 });
 
@@ -118,6 +119,9 @@ builder.Services.AddSignalR();
 var app = builder.Build();
 app.MapHub<ChatHub>("/chatHub");
 
+// Serve static files from wwwroot so uploaded images are accessible
+app.UseStaticFiles();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -125,11 +129,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
-app.UseCors(builder => builder
-    .WithOrigins("http://localhost:5173") 
-    .AllowAnyMethod()
-    .AllowAnyHeader()
-    .AllowCredentials()); 
+// Use the named CORS policy so both configured origins are allowed
+app.UseCors("AllowReactApp");
 app.UseAuthentication();    
 app.UseAuthorization();     
 

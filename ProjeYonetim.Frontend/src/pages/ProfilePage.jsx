@@ -20,6 +20,7 @@ export default function ProfilePage() {
         profilePicture: "" 
     });
 
+    const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef(null); 
 
     useEffect(() => {
@@ -80,25 +81,53 @@ export default function ProfilePage() {
         setUserInfo({ ...userInfo, [e.target.name]: e.target.value });
     };
 
-    const handleFileChange = (e) => {
+    // New: upload selected file to backend and set returned URL
+    const handleFileChange = async (e) => {
         const file = e.target.files[0];
-        if (file) {
-            if (file.size > 2 * 1024 * 1024) {
-                alert("Lütfen 2MB'den küçük bir fotoğraf seçin.");
-                return;
-            }
+        if (!file) return;
 
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setUserInfo({ ...userInfo, profilePicture: reader.result });
-            };
-            reader.readAsDataURL(file);
+        if (file.size >2 *1024 *1024) {
+            alert("Lütfen2MB'den küçük bir fotoğraf seçin.");
+            return;
+        }
+
+        if (!file.type.startsWith('image/')) {
+            alert('Lütfen bir resim dosyası seçin.');
+            return;
+        }
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('Giriş yapmalısınız.');
+            return;
+        }
+
+        const form = new FormData();
+        form.append('file', file);
+
+        try {
+            setUploading(true);
+            const res = await axios.post(`${API_URL}/api/profile/upload`, form, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            if (res.data && res.data.url) {
+                setUserInfo(prev => ({ ...prev, profilePicture: res.data.url }));
+            }
+        } catch (err) {
+            console.error('Upload hatası:', err);
+            alert('Fotoğraf yüklenirken hata oluştu.');
+        } finally {
+            setUploading(false);
         }
     };
 
-    const totalTasks = stats.reduce((acc, curr) => acc + curr.value, 0);
-    const completedTasks = stats.find(s => s.name === "Bitenler")?.value || 0;
-    const completionRate = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
+    const totalTasks = stats.reduce((acc, curr) => acc + curr.value,0);
+    const completedTasks = stats.find(s => s.name === "Bitenler")?.value ||0;
+    const completionRate = totalTasks ===0 ?0 : Math.round((completedTasks / totalTasks) *100);
 
     if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary" style={{width: '3rem', height: '3rem'}}></div></div>;
 
@@ -117,7 +146,7 @@ export default function ProfilePage() {
                 <div style={{ height: '150px', background: 'linear-gradient(135deg, #0079bf, #00b4d8)' }}></div>
                 <div className="card-body position-relative px-5 pb-5">
                     
-                    <div className="position-absolute" style={{ top: '-50px', width: '120px', height: '120px', backgroundColor: 'white', borderRadius: '50%', padding: '5px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', zIndex: 10 }}>
+                    <div className="position-absolute" style={{ top: '-50px', width: '120px', height: '120px', backgroundColor: 'white', borderRadius: '50%', padding: '5px', boxShadow: '04px10px rgba(0,0,0,0.1)', zIndex:10 }}>
                         <div 
                             className="w-100 h-100 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold fs-1 position-relative overflow-hidden" 
                             style={{ backgroundColor: '#ff9f43', cursor: isEditing ? 'pointer' : 'default' }}
@@ -132,12 +161,12 @@ export default function ProfilePage() {
                             {isEditing && (
                                 <div 
                                     className="position-absolute w-100 h-100 d-flex flex-column align-items-center justify-content-center" 
-                                    style={{ backgroundColor: 'rgba(0,0,0,0.5)', opacity: 0, transition: '0.3s' }} 
-                                    onMouseEnter={(e) => e.currentTarget.style.opacity = 1} 
-                                    onMouseLeave={(e) => e.currentTarget.style.opacity = 0}
+                                    style={{ backgroundColor: 'rgba(0,0,0,0.5)', opacity:0, transition: '0.3s' }} 
+                                    onMouseEnter={(e) => e.currentTarget.style.opacity =1} 
+                                    onMouseLeave={(e) => e.currentTarget.style.opacity =0}
                                 >
                                     <span style={{ fontSize: '1.5rem' }}>📷</span>
-                                    <span style={{ fontSize: '0.7rem', fontWeight: 'normal' }}>Değiştir</span>
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 'normal' }}>{uploading ? 'Yükleniyor...' : 'Değiştir'}</span>
                                 </div>
                             )}
                         </div>
@@ -228,11 +257,11 @@ export default function ProfilePage() {
                     <div className="card border-0 shadow-sm rounded-4 h-100">
                         <div className="card-body p-4">
                             <h5 className="fw-bold text-dark mb-4">📁 Dahil Olduğum Projeler</h5>
-                            {projects.length === 0 ? (
+                            {projects.length ===0 ? (
                                 <p className="text-muted text-center my-5">Henüz bir projeye dahil değilsiniz.</p>
                             ) : (
                                 <div className="list-group list-group-flush">
-                                    {projects.slice(0, 4).map(proj => (
+                                    {projects.slice(0,4).map(proj => (
                                         <div key={proj.projectId} className="list-group-item px-0 py-3 d-flex justify-content-between align-items-center border-bottom-0 mb-2 rounded-3 bg-light px-3">
                                             <div>
                                                 <h6 className="fw-bold mb-1">{proj.projectName}</h6>
@@ -252,8 +281,8 @@ export default function ProfilePage() {
 
             <div className="card border-0 shadow-sm rounded-4 mb-5">
                 <div className="card-body p-4">
-                    <h5 className="fw-bold text-dark mb-4">📌 Bana Atanan Görevler</h5>
-                    {myTasks.length === 0 ? (
+                    <h5 className="fw-bold text-dark mb-4"> Bana Atanan Görevler</h5>
+                    {myTasks.length ===0 ? (
                         <div className="text-center p-4 bg-light rounded-3">
                             <p className="text-muted mb-0 fs-5">Şu an üzerinizde bir görev bulunmuyor. Harika!</p>
                         </div>
