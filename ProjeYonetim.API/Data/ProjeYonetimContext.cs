@@ -23,6 +23,7 @@ public partial class ProjeYonetimContext : DbContext
     public DbSet<ProjectCollaborator> ProjectCollaborators { get; set; }
     public DbSet<Comment> Comments { get; set; }
     public DbSet<Message> Messages { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         => optionsBuilder.UseSqlServer("Name=ConnectionStrings:DefaultConnection");

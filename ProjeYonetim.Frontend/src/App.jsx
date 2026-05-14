@@ -2,6 +2,7 @@ import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import ChatBox from './pages/ChatBox';
 import ProfilePage from './pages/ProfilePage';
+import NotificationCenter from './pages/NotificationCenter';
 
 function App() {
   const navigate = useNavigate();
@@ -59,9 +60,11 @@ function App() {
               )}
             </ul>
 
-            <div className="d-flex">
+            <div className="d-flex align-items-center">
               {isLogged && (
                 <> 
+                  <NotificationCenter />
+                  
                   <Link to="/profile" className="btn btn-outline-light btn-sm fw-bold me-2">
                      Profilim
                   </Link>

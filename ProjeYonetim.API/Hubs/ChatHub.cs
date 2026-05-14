@@ -18,7 +18,10 @@ namespace ProjeYonetim.API.Hubs
             _context = context;
         }
 
-
+        public async System.Threading.Tasks.Task SendNotification(int userId, object notification)
+        {
+            await Clients.User(userId.ToString()).SendAsync("ReceiveNotification", notification);
+        }
         public async System.Threading.Tasks.Task SendMessage(int receiverId, string content)
         {
             

@@ -9,6 +9,8 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Microsoft.AspNetCore.SignalR;
+using ProjeYonetim.API.Hubs;
 
 namespace ProjeYonetim.API.Controllers
 {
@@ -18,10 +20,12 @@ namespace ProjeYonetim.API.Controllers
     public class TasksController : ControllerBase
     {
         private readonly ProjeYonetimContext _context;
+        private readonly IHubContext<ChatHub> _hubContext;
 
-        public TasksController(ProjeYonetimContext context)
+        public TasksController(ProjeYonetimContext context, IHubContext<ChatHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
 
@@ -156,6 +160,25 @@ namespace ProjeYonetim.API.Controllers
 
             task.AssignedUserId = userId == 0 ? (int?)null : userId;
             await _context.SaveChangesAsync();
+
+            if (userId != 0 && userId != requesterId) 
+            {
+                var requester = await _context.Users.FindAsync(requesterId);
+                var notification = new Models.Notification
+                {
+                    UserId = userId,
+                    Message = $"{requester?.FullName ?? "Birisi"} sana '{task.Title}' görevini atadı.",
+                    Type = "TaskAssignment",
+                    TargetUrl = $"/board/{task.List.ProjectId}",
+                    CreatedAt = System.DateTime.Now
+                };
+
+                _context.Notifications.Add(notification);
+                await _context.SaveChangesAsync();
+
+                await _hubContext.Clients.User(userId.ToString()).SendAsync("ReceiveNotification", notification);
+            }
+
             return Ok(new { message = "Atama güncellendi." });
         }
 

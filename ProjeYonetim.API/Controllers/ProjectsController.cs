@@ -10,6 +10,8 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System;
+using Microsoft.AspNetCore.SignalR;
+using ProjeYonetim.API.Hubs;
 
 namespace ProjeYonetim.API.Controllers
 {
@@ -18,11 +20,13 @@ namespace ProjeYonetim.API.Controllers
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public class ProjectsController : ControllerBase
     {
-        private readonly ProjeYonetimContext _context;
+        private readonly ProjeYonetimContext _context; 
+        private readonly IHubContext<ChatHub> _hubContext;
 
-        public ProjectsController(ProjeYonetimContext context)
+        public ProjectsController(ProjeYonetimContext context, IHubContext<ChatHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         [HttpGet]
@@ -59,6 +63,8 @@ namespace ProjeYonetim.API.Controllers
                 })
                 .OrderByDescending(p => p.CreatedAt)
                 .ToList();
+
+
 
             return Ok(allProjects);
         }
@@ -207,8 +213,29 @@ namespace ProjeYonetim.API.Controllers
                 ProjectId = projectId,
                 UserId = userToAdd.UserId
             });
-
             await _context.SaveChangesAsync();
+
+            var requesterIdString = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            int requesterId = int.Parse(requesterIdString);
+
+            if (userToAdd.UserId != requesterId)
+            {
+                var requester = await _context.Users.FindAsync(requesterId);
+                var notification = new Models.Notification
+                {
+                    UserId = userToAdd.UserId,
+                    Message = $"{requester?.FullName ?? "Birisi"} seni '{project.ProjectName}' projesine dahil etti.",
+                    Type = "ProjectInvite",
+                    TargetUrl = $"/board/{projectId}", 
+                    CreatedAt = System.DateTime.Now
+                };
+
+                _context.Notifications.Add(notification);
+                await _context.SaveChangesAsync();
+
+                await _hubContext.Clients.User(userToAdd.UserId.ToString()).SendAsync("ReceiveNotification", notification);
+            }
+
             return Ok(new { message = "Üye eklendi." });
         }
     }
