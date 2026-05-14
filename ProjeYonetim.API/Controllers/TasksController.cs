@@ -241,6 +241,7 @@ namespace ProjeYonetim.API.Controllers
 
             task.Title = taskDto.Title;
             task.Description = taskDto.Description;
+            task.DueDate = taskDto.DueDate;
 
             await _context.SaveChangesAsync();
             return Ok(new { message = "Kart güncellendi." });
@@ -274,6 +275,7 @@ namespace ProjeYonetim.API.Controllers
         {
             public string Title { get; set; }
             public string Description { get; set; }
+            public DateTime? DueDate { get; set; }
         }
 
 
@@ -336,6 +338,32 @@ namespace ProjeYonetim.API.Controllers
             {
                 return StatusCode(500, "Durum güncellenirken sunucu hatası oluştu: " + ex.Message);
             }
+        }
+        [HttpGet("my-tasks")]
+        public async Task<IActionResult> GetMyTasks()
+        {
+            var userIdString = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
+            int userId = int.Parse(userIdString);
+
+            var myTasks = await _context.Tasks
+                .Include(t => t.List)
+                .ThenInclude(l => l.Project)
+                .Where(t => t.AssignedUserId == userId)
+                .Select(t => new
+                {
+                    TaskId = t.TaskId,
+                    Title = t.Title,
+                    Status = t.Status,
+                    Priority = t.Priority,
+                    DueDate = t.DueDate,
+                    ProjectName = t.List.Project.ProjectName,
+                    ProjectId = t.List.ProjectId
+                })
+                .OrderBy(t => t.DueDate) 
+                .ToListAsync();
+
+            return Ok(myTasks);
         }
     }
 }

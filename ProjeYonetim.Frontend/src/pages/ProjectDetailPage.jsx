@@ -48,6 +48,7 @@ function ProjectDetailPage() {
   const [isEditing, setIsEditing] = useState(false); 
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editDueDate, setEditDueDate] = useState(''); 
  
   const currentUserId = getCurrentUserId();
  
@@ -100,9 +101,7 @@ function ProjectDetailPage() {
  
         const token = localStorage.getItem('token');
         try {
- 
             const orderedIds = newTasks.map(t => t.taskId);
- 
             await axios.put(`${API_URL}/api/tasks/reorder`,
                 { listId: startList.listId, taskIds: orderedIds },
                 { headers: { Authorization: `Bearer ${token}` } }
@@ -187,18 +186,13 @@ function ProjectDetailPage() {
   };
 
   const handleStatusChange = async (taskId, newStatus) => {
-    
     updateLocalTask(taskId, { status: newStatus });
-
     const token = localStorage.getItem('token');
     try {
-      
       await axios.put(`${API_URL}/api/Tasks/${taskId}/status`, 
         newStatus, 
         { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
       );
-      
-    
       fetchProjectDetails(); 
     } catch (err) {
       console.error("Durum güncellenemedi:", err);
@@ -208,9 +202,14 @@ function ProjectDetailPage() {
  
   const handleTaskClick = (task) => { 
       setSelectedTask(task); 
- 
       setEditTitle(task.title);
       setEditDescription(task.description || '');
+      
+      const dateVal = (task.dueDate && new Date(task.dueDate).getFullYear() > 1970) 
+        ? new Date(task.dueDate).toISOString().split('T')[0] 
+        : '';
+      setEditDueDate(dateVal);
+
       setIsEditing(false); 
       fetchComments(task.taskId);
   };
@@ -221,7 +220,6 @@ function ProjectDetailPage() {
       const response = await axios.get(`${API_URL}/api/tasks/${taskId}/comments`, { headers: { Authorization: `Bearer ${token}` } });
       setComments(response.data || []);
     } catch (err) {
-      // Fallback: try query-based endpoint if the above doesn't exist
       try {
         const response = await axios.get(`${API_URL}/api/comments?taskId=${taskId}`, { headers: { Authorization: `Bearer ${token}` } });
         setComments(response.data || []);
@@ -239,11 +237,10 @@ function ProjectDetailPage() {
  
   const handleAddComment = async () => {
     const text = newComment.trim();
-    if (!text) return; // ignore empty
+    if (!text) return; 
     const token = localStorage.getItem('token');
     try {
       const response = await axios.post(`${API_URL}/api/tasks/comments`, { taskId: selectedTask.taskId, text }, { headers: { Authorization: `Bearer ${token}` } });
-      // Prepare a normalized comment object to append immediately
       const resp = response.data || {};
       const createdAt = resp.createdAt && !isNaN(new Date(resp.createdAt).getTime()) ? resp.createdAt : new Date().toISOString();
       const commentId = resp.commentId || resp.id || `tmp-${Date.now()}`;
@@ -253,7 +250,6 @@ function ProjectDetailPage() {
       const appended = { commentId, userName, text: commentText, createdAt };
       setComments(prev => [...prev, appended]);
       setNewComment('');
-      // Try to sync with server in background (refresh if server returns full data)
       if (!response.data || !response.data.commentId) {
         fetchComments(selectedTask.taskId);
       }
@@ -271,22 +267,17 @@ function ProjectDetailPage() {
  
   const handleDeleteTask = async (taskId) => {
       if (!window.confirm("Bu kartı kalıcı olarak silmek istediğinize emin misiniz?")) return;
- 
       const token = localStorage.getItem('token');
       try {
- 
           await axios.delete(`${API_URL}/api/tasks/${taskId}`, {
               headers: { Authorization: `Bearer ${token}` }
           });
- 
           setSelectedTask(null);
- 
           const newLists = projectData.lists.map(list => ({
               ...list,
               tasks: list.tasks.filter(t => t.taskId !== taskId)
           }));
           setProjectData({ ...projectData, lists: newLists });
- 
       } catch (err) {
           console.error(err);
           alert("Kart silinemedi. Yetkiniz olmayabilir.");
@@ -297,11 +288,19 @@ function ProjectDetailPage() {
       const token = localStorage.getItem('token');
       try {
           await axios.put(`${API_URL}/api/tasks/${selectedTask.taskId}`,
-              { title: editTitle, description: editDescription },
+              { 
+                  title: editTitle, 
+                  description: editDescription,
+                  dueDate: editDueDate || null 
+              },
               { headers: { Authorization: `Bearer ${token}` } }
           );
  
-          updateLocalTask(selectedTask.taskId, { title: editTitle, description: editDescription });
+          updateLocalTask(selectedTask.taskId, { 
+              title: editTitle, 
+              description: editDescription,
+              dueDate: editDueDate || null
+          });
           
           setIsEditing(false);
           alert("Kart güncellendi!");
@@ -372,7 +371,6 @@ function ProjectDetailPage() {
                                           <option value={2}> Bitti</option>
                                         </select>
                                         
-
                                     </div>
                                 )}
                             </Draggable>
@@ -483,6 +481,24 @@ function ProjectDetailPage() {
                 ) : (
                     <p style={{ background: '#f4f5f7', padding: '10px', borderRadius: '4px', minHeight: '40px' }}>
                         {selectedTask.description || <span style={{color:'#888', fontStyle:'italic'}}>Açıklama yok...</span>}
+                    </p>
+                )}
+              </section>
+
+              <section className="modal-section">
+                <h4> Bitiş Tarihi</h4>
+                {isEditing ? (
+                    <input 
+                        type="date"
+                        className="input-styled"
+                        value={editDueDate}
+                        onChange={(e) => setEditDueDate(e.target.value)}
+                    />
+                ) : (
+                    <p style={{ background: '#f4f5f7', padding: '10px', borderRadius: '4px', minHeight: '40px', display: 'flex', alignItems: 'center' }}>
+                        {selectedTask.dueDate && new Date(selectedTask.dueDate).getFullYear() > 1970 
+                            ? new Date(selectedTask.dueDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })
+                            : <span style={{color:'#888', fontStyle:'italic'}}>Tarih belirtilmedi...</span>}
                     </p>
                 )}
               </section>

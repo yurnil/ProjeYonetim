@@ -7,6 +7,7 @@ const API_URL = 'http://localhost:5101';
 export default function ProfilePage() {
     const [projects, setProjects] = useState([]);
     const [stats, setStats] = useState([]);
+    const [myTasks, setMyTasks] = useState([]); 
     const [loading, setLoading] = useState(true);
     
     const [isEditing, setIsEditing] = useState(false);
@@ -24,7 +25,6 @@ export default function ProfilePage() {
             if (!token) return;
 
             try {
-
                 const profileRes = await axios.get(`${API_URL}/api/profile`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
@@ -39,6 +39,12 @@ export default function ProfilePage() {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setStats(statsRes.data);
+
+                const tasksRes = await axios.get(`${API_URL}/api/Tasks/my-tasks`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setMyTasks(tasksRes.data);
+
             } catch (err) {
                 console.error("Veriler çekilemedi:", err);
             } finally {
@@ -75,6 +81,15 @@ export default function ProfilePage() {
     const completionRate = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
 
     if (loading) return <div className="text-center mt-5"><div className="spinner-border text-primary" style={{width: '3rem', height: '3rem'}}></div></div>;
+
+    const getStatusBadge = (status) => {
+        switch(status) {
+            case 0: return <span className="badge bg-secondary rounded-pill px-3 py-2 shadow-sm">Yapılacaklar</span>;
+            case 1: return <span className="badge bg-warning text-dark rounded-pill px-3 py-2 shadow-sm">Devam Edenler</span>;
+            case 2: return <span className="badge bg-success rounded-pill px-3 py-2 shadow-sm">Bitenler</span>;
+            default: return <span className="badge bg-light text-dark rounded-pill px-3 py-2 shadow-sm">Belirsiz</span>;
+        }
+    };
 
     return (
         <div className="container py-5">
@@ -139,7 +154,7 @@ export default function ProfilePage() {
                 </div>
             </div>
 
-            <div className="row g-4">
+            <div className="row g-4 mb-4">
                 <div className="col-md-4">
                     <div className="card border-0 shadow-sm rounded-4 h-100">
                         <div className="card-body p-4">
@@ -192,6 +207,51 @@ export default function ProfilePage() {
                     </div>
                 </div>
             </div>
+
+            <div className="card border-0 shadow-sm rounded-4 mb-5">
+                <div className="card-body p-4">
+                    <h5 className="fw-bold text-dark mb-4">📌 Bana Atanan Görevler</h5>
+                    {myTasks.length === 0 ? (
+                        <div className="text-center p-4 bg-light rounded-3">
+                            <p className="text-muted mb-0 fs-5">Şu an üzerinizde bir görev bulunmuyor. Harika!</p>
+                        </div>
+                    ) : (
+                        <div className="table-responsive">
+                            <table className="table table-hover align-middle mb-0">
+                                <thead className="table-light text-muted">
+                                    <tr>
+                                        <th className="fw-semibold rounded-start-3">Görev Adı</th>
+                                        <th className="fw-semibold">Proje</th>
+                                        <th className="fw-semibold">Bitiş Tarihi</th>
+                                        <th className="fw-semibold">Durum</th>
+                                        <th className="fw-semibold text-end rounded-end-3">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {myTasks.map(task => (
+                                        <tr key={task.taskId}>
+                                            <td className="fw-bold text-dark py-3">{task.title}</td>
+                                            <td className="text-secondary">{task.projectName}</td>
+                                            <td className="text-secondary">
+                                                {new Date(task.dueDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                            </td>
+                                            <td>
+                                                {getStatusBadge(task.status)}
+                                            </td>
+                                            <td className="text-end">
+                                                <Link to={`/board/${task.projectId}`} className="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold">
+                                                    Göreve Git
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            </div>
+            
         </div>
     );
 }

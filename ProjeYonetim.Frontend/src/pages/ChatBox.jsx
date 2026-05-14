@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { HubConnectionBuilder } from '@microsoft/signalr';
 
-const API_URL = 'http://localhost:5101'; // Kendi portuna göre düzeltmeyi unutma
+const API_URL = 'http://localhost:5101'; 
 
 export default function ChatBox() {
     const [connection, setConnection] = useState(null);
@@ -12,11 +12,9 @@ export default function ChatBox() {
     const [contacts, setContacts] = useState([]);
     const [currentUserId, setCurrentUserId] = useState(null);
 
-    // Canlı mesaj gelirken seçili kullanıcıyı bilmek için (SignalR bug'ını önler)
     const selectedUserRef = useRef(null);
     useEffect(() => { selectedUserRef.current = selectedUser; }, [selectedUser]);
 
-    // 1. AÇILIŞTA KİŞİLERİ VE OKUNMAMIŞ SAYILARINI GETİR
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (!token) return;
@@ -38,29 +36,24 @@ export default function ChatBox() {
         setConnection(newConnection);
     }, []);
 
-    // 2. KİŞİYE TIKLAYINCA: Eski mesajları getir ve "Okundu" yap
     const handleSelectUser = async (user) => {
         setSelectedUser(user);
         const token = localStorage.getItem('token');
         
-        // Ekranda okunmamış sayısını anında sıfırla
         setContacts(prev => prev.map(c => c.userId === user.userId ? { ...c, unreadCount: 0 } : c));
 
-        // Eski mesajları getir
         fetch(`${API_URL}/api/messages/history/${user.userId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         })
         .then(res => res.json())
         .then(data => setMessages(data));
 
-        // Backend'e okundu bilgisini gönder
         fetch(`${API_URL}/api/messages/mark-read/${user.userId}`, {
             method: 'PUT',
             headers: { 'Authorization': `Bearer ${token}` }
         });
     };
 
-    // 3. SIGNALR DİNLEMESİ (Canlı Mesajlar & Bildirim Arttırma)
     useEffect(() => {
         if (connection) {
             connection.start()
@@ -68,7 +61,6 @@ export default function ChatBox() {
                     connection.on('ReceiveMessage', (message) => {
                         setMessages(prev => [...prev, message]);
                         
-                        // Eğer mesaj atan kişi o an SEÇİLİ DEĞİLSE, okunmamış sayısını 1 arttır
                         setContacts(prev => prev.map(c => {
                             if (c.userId === message.senderId && selectedUserRef.current?.userId !== message.senderId) {
                                 return { ...c, unreadCount: (c.unreadCount || 0) + 1 };
@@ -100,15 +92,12 @@ export default function ChatBox() {
 
     const messagesEndRef = useRef(null);
     useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "auto" }); }, [messages]);
-
-    // Toplam okunmamış mesaj sayısını hesapla (Ana buton için)
-    const totalUnread = contacts.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+    const totalUnread = contacts?.reduce((sum, c) => sum + (c.unreadCount || 0), 0) || 0;
 
     if (!currentUserId) return null; 
 
     return (
         <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 1000 }}>
-            {/* KAPALIYKEN GÖRÜNEN ANA BUTON VE TOPLAM BİLDİRİM */}
             {!isOpen && (
                 <button onClick={() => setIsOpen(true)} style={{ backgroundColor: '#0079bf', color: 'white', borderRadius: '50%', width: '60px', height: '60px', fontSize: '24px', boxShadow: '0 4px 8px rgba(0,0,0,0.2)', border: 'none', cursor: 'pointer', position: 'relative' }}>
                     💬
@@ -128,7 +117,6 @@ export default function ChatBox() {
                     </div>
 
                     <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                        {/* SOL TARAF: KİŞİLER LİSTESİ */}
                         <div style={{ width: '35%', borderRight: '1px solid #ccc', overflowY: 'auto', backgroundColor: '#fafafa' }}>
                             {contacts.map(u => (
                                 <div 
@@ -137,11 +125,9 @@ export default function ChatBox() {
                                     style={{ 
                                         padding: '12px 10px', 
                                         cursor: 'pointer', 
-                                        // TASARIM: Seçiliyse normal mavi, okunmamış varsa hafif mavi
                                         backgroundColor: selectedUser?.userId === u.userId ? '#e6f0ff' : (u.unreadCount > 0 ? '#f0f8ff' : 'transparent'), 
                                         borderBottom: '1px solid #eee', 
                                         fontSize: '13px', 
-                                        // TASARIM: Okunmamış varsa kalın font
                                         fontWeight: (selectedUser?.userId === u.userId || u.unreadCount > 0) ? 'bold' : 'normal', 
                                         color: '#333',
                                         display: 'flex',
@@ -151,7 +137,6 @@ export default function ChatBox() {
                                 >
                                     <span>{u.fullName || 'Kullanıcı'}</span>
                                     
-                                    {/* KİŞİYE ÖZEL BİLDİRİM YUVARLAĞI */}
                                     {u.unreadCount > 0 && (
                                         <span style={{ backgroundColor: '#e53935', color: 'white', borderRadius: '12px', padding: '2px 7px', fontSize: '11px', fontWeight: 'bold' }}>
                                             {u.unreadCount}
@@ -161,7 +146,6 @@ export default function ChatBox() {
                             ))}
                         </div>
                        
-                        {/* SAĞ TARAF: MESAJ ALANI */}
                         <div style={{ width: '65%', display: 'flex', flexDirection: 'column' }}>
                             {selectedUser ? (
                                 <>

@@ -11,6 +11,8 @@ namespace ProjeYonetim.API.DTOs
         [StringLength(2000)]
         public string? Description { get; set; }
 
+        public DateTime? DueDate { get; set; }
+
         [Required(ErrorMessage = "Liste ID'si zorunludur.")]
         public int ListId { get; set; }
     }
