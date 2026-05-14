@@ -26,6 +26,7 @@ public partial class User
     public string? Role { get; set; }        
     public string? Department { get; set; }   
     public string? Skills { get; set; }
+    public string? ProfilePicture { get; set; }
 
     public bool IsEnabled { get; set; }
 

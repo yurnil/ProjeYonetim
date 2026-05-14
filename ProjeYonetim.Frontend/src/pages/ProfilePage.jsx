@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 
@@ -16,8 +16,11 @@ export default function ProfilePage() {
         email: "",
         role: "",
         department: "",
-        skills: ""
+        skills: "",
+        profilePicture: "" 
     });
+
+    const fileInputRef = useRef(null); 
 
     useEffect(() => {
         const fetchProfileData = async () => {
@@ -62,7 +65,8 @@ export default function ProfilePage() {
                 fullName: userInfo.fullName,
                 role: userInfo.role,
                 department: userInfo.department,
-                skills: userInfo.skills
+                skills: userInfo.skills,
+                profilePicture: userInfo.profilePicture 
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
@@ -74,6 +78,22 @@ export default function ProfilePage() {
 
     const handleInputChange = (e) => {
         setUserInfo({ ...userInfo, [e.target.name]: e.target.value });
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) {
+                alert("Lütfen 2MB'den küçük bir fotoğraf seçin.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setUserInfo({ ...userInfo, profilePicture: reader.result });
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     const totalTasks = stats.reduce((acc, curr) => acc + curr.value, 0);
@@ -96,10 +116,32 @@ export default function ProfilePage() {
             <div className="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
                 <div style={{ height: '150px', background: 'linear-gradient(135deg, #0079bf, #00b4d8)' }}></div>
                 <div className="card-body position-relative px-5 pb-5">
-                    <div className="position-absolute" style={{ top: '-50px', width: '120px', height: '120px', backgroundColor: 'white', borderRadius: '50%', padding: '5px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
-                        <div className="w-100 h-100 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold fs-1" style={{ backgroundColor: '#ff9f43' }}>
-                            {userInfo.fullName ? userInfo.fullName.charAt(0).toUpperCase() : '?'}
+                    
+                    <div className="position-absolute" style={{ top: '-50px', width: '120px', height: '120px', backgroundColor: 'white', borderRadius: '50%', padding: '5px', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', zIndex: 10 }}>
+                        <div 
+                            className="w-100 h-100 rounded-circle d-flex align-items-center justify-content-center text-white fw-bold fs-1 position-relative overflow-hidden" 
+                            style={{ backgroundColor: '#ff9f43', cursor: isEditing ? 'pointer' : 'default' }}
+                            onClick={() => isEditing && fileInputRef.current.click()}
+                        >
+                            {userInfo.profilePicture ? (
+                                <img src={userInfo.profilePicture} alt="Profil" className="w-100 h-100" style={{ objectFit: 'cover' }} />
+                            ) : (
+                                userInfo.fullName ? userInfo.fullName.charAt(0).toUpperCase() : '?'
+                            )}
+
+                            {isEditing && (
+                                <div 
+                                    className="position-absolute w-100 h-100 d-flex flex-column align-items-center justify-content-center" 
+                                    style={{ backgroundColor: 'rgba(0,0,0,0.5)', opacity: 0, transition: '0.3s' }} 
+                                    onMouseEnter={(e) => e.currentTarget.style.opacity = 1} 
+                                    onMouseLeave={(e) => e.currentTarget.style.opacity = 0}
+                                >
+                                    <span style={{ fontSize: '1.5rem' }}>📷</span>
+                                    <span style={{ fontSize: '0.7rem', fontWeight: 'normal' }}>Değiştir</span>
+                                </div>
+                            )}
                         </div>
+                        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} style={{ display: 'none' }} />
                     </div>
                     
                     <div style={{ marginTop: '70px' }}>
@@ -233,7 +275,9 @@ export default function ProfilePage() {
                                             <td className="fw-bold text-dark py-3">{task.title}</td>
                                             <td className="text-secondary">{task.projectName}</td>
                                             <td className="text-secondary">
-                                                {new Date(task.dueDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                {task.dueDate 
+                                                    ? new Date(task.dueDate).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) 
+                                                    : <span className="text-muted fst-italic small">Tarih Seçilmedi</span>}
                                             </td>
                                             <td>
                                                 {getStatusBadge(task.status)}

@@ -52,6 +52,8 @@ namespace ProjeYonetim.API.Controllers
             user.Role = dto.Role;
             user.Department = dto.Department;
             user.Skills = dto.Skills;
+            user.ProfilePicture = dto.ProfilePicture;
+
 
             await _context.SaveChangesAsync();
             return Ok(new { message = "Profil başarıyla güncellendi!" });
@@ -65,5 +67,7 @@ namespace ProjeYonetim.API.Controllers
         public string Role { get; set; }
         public string Department { get; set; }
         public string Skills { get; set; }
+        public string? ProfilePicture { get; set; }
+        public ProfileUpdateDto() { }
     }
 }
