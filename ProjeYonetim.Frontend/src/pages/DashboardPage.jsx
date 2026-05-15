@@ -14,10 +14,14 @@ function DashboardPage() {
   const [myTasks, setMyTasks] = useState([]); 
   const [searchTerm, setSearchTerm] = useState(''); 
 
+  const token = localStorage.getItem('token');
+
   useEffect(() => {
     const fetchAllData = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
       try {
         const projRes = await axios.get(`${API_URL}/api/projects`, { headers: { Authorization: `Bearer ${token}` } });
@@ -42,13 +46,12 @@ function DashboardPage() {
     };
 
     fetchAllData();
-  }, []);
+  }, [token]);
 
   const handleCreateProject = async (e) => {
     e.preventDefault();
     if (!newProjectName.trim()) return;
 
-    const token = localStorage.getItem('token');
     try {
       await axios.post(`${API_URL}/api/projects`, 
         { projectName: newProjectName, description: "Yeni proje oluşturuldu." }, 
@@ -67,7 +70,6 @@ function DashboardPage() {
   const handleDeleteProject = async (projectId) => {
     if(!window.confirm("Bu projeyi ve içindeki her şeyi silmek istediğine emin misin?")) return;
 
-    const token = localStorage.getItem('token');
     try {
         await axios.delete(`${API_URL}/api/projects/${projectId}`, {
             headers: { Authorization: `Bearer ${token}` }
@@ -78,6 +80,24 @@ function DashboardPage() {
         toast.error("Proje silinemedi.");
     }
   };
+
+  if (!token) {
+      return (
+          <div className="container d-flex flex-column align-items-center justify-content-center text-center" style={{ minHeight: '70vh' }}>
+              <div className="bg-white p-5 rounded-5 shadow-sm border border-light" style={{ maxWidth: '600px' }}>
+                  <div style={{ fontSize: '4rem', marginBottom: '10px' }}>🚀</div>
+                  <h1 className="fw-bold text-dark mb-3">Proje Yönetim'e Hoş Geldiniz</h1>
+                  <p className="text-muted fs-5 mb-5">
+                      Takımınızla organize olun, görevlerinizi takip edin ve projelerinizi başarıyla tamamlayın. Devam etmek için lütfen giriş yapın.
+                  </p>
+                  <div className="d-flex gap-3 justify-content-center">
+                      <Link to="/login" className="btn btn-primary btn-lg px-5 py-3 rounded-pill fw-bold shadow-sm">Giriş Yap</Link>
+                      <Link to="/register" className="btn btn-outline-primary btn-lg px-5 py-3 rounded-pill fw-bold">Kayıt Ol</Link>
+                  </div>
+              </div>
+          </div>
+      );
+  }
 
   const totalTasks = taskStats.reduce((acc, curr) => acc + curr.value, 0);
   const completedTasks = taskStats.find(s => s.name === "Bitenler")?.value || 0;
@@ -271,7 +291,6 @@ function DashboardPage() {
                     </div>
 
                     <h5 className="card-title fw-bold text-dark mb-2">{proj.projectName}</h5>
-                    
                     
                     <div className="mt-3 pt-3 border-top">
                         <Link to={`/board/${proj.projectId}`} className="btn btn-primary w-100 fw-bold rounded-pill shadow-sm py-2">
