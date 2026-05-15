@@ -8,7 +8,6 @@
     overflow: hidden;
 }
 
-
 .project-header {
     background-color: #ffffff;
     padding: 15px 25px;
@@ -38,7 +37,6 @@
     margin-top: 5px;
 }
 
-
 .board-canvas {
     flex-grow: 1;
     display: flex;
@@ -46,18 +44,21 @@
     gap: 15px;
     padding: 20px;
     overflow-x: auto;
+    overflow-y: hidden; 
+    -webkit-overflow-scrolling: touch; 
+    height: calc(100vh - 100px); 
 }
-
 
 .list-wrapper {
     background-color: #ebecf0;
-    min-width: 272px;
+    min-width: 272px; 
     max-width: 272px;
+    flex: 0 0 auto; 
     border-radius: 8px;
     padding: 10px;
     display: flex;
     flex-direction: column;
-    max-height: calc(100vh - 140px);
+    max-height: 100%; 
 }
 
 .list-wrapper h3 {
@@ -66,7 +67,6 @@
     font-size: 15px;
     font-weight: 600;
 }
-
 
 .tasks-container {
     flex-grow: 1;
@@ -87,12 +87,12 @@
     transition: background 0.1s;
     color: #172b4d;
     border: none;
+    word-wrap: break-word; 
 }
 
 .task-card:hover {
     background-color: #f4f5f7;
 }
-
 
 .label-badge {
     display: inline-block;
@@ -112,7 +112,6 @@
     align-items: center;
     gap: 4px;
 }
-
 
 .input-styled {
     width: 100%;
@@ -150,12 +149,10 @@
     cursor: pointer;
 }
 
-
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #bfc4ce; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #aeb5c0; }
-
 
 .modal-overlay {
     position: fixed; 
@@ -166,13 +163,14 @@
     justify-content: center;
     align-items: center;
     z-index: 2000; 
+    padding: 15px; 
 }
 
 .modal-content {
     background: #f4f5f7;
     width: 600px;
-    max-width: 90%;
-    max-height: 85vh;
+    max-width: 100%; 
+    max-height: 90vh; 
     overflow-y: auto;
     border-radius: 8px;
     padding: 24px;
@@ -180,6 +178,21 @@
     border: 1px solid #dfe1e6;
     position: relative;
     display: block;
+}
+
+@media (max-width: 768px) {
+    .modal-content {
+        padding: 15px;
+    }
+    .modal-header h2, .modal-header input {
+        font-size: 1.2rem !important;
+    }
+    .project-header {
+        padding: 10px 15px;
+    }
+    .member-add-box {
+        flex-direction: column; 
+    }
 }
 
 .modal-section {
@@ -236,7 +249,6 @@
     gap: 8px;
 }
 
-
 .label-selector {
     display: flex;
     gap: 12px;
@@ -245,31 +257,25 @@
 }
 
 .label-btn {
-
     padding: 8px 18px;
     border-radius: 50px; 
     border: 2px solid transparent; 
-    
-
     color: white; 
     font-weight: 700; 
     font-size: 13px;
     letter-spacing: 0.5px; 
     text-transform: uppercase; 
-
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
     text-shadow: 0 1px 2px rgba(0,0,0,0.2);
 }
 
-
 .label-btn:hover {
     transform: translateY(-3px) scale(1.05); 
     box-shadow: 0 8px 15px rgba(0,0,0,0.2); 
     filter: brightness(1.1); 
 }
-
 
 .label-btn:active {
     transform: scale(0.95); 
